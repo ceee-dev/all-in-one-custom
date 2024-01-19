@@ -685,7 +685,412 @@
       "tmpfs": [
         "/tmp"
       ]
-    }
-    
+    },
+    {
+      "container_name": "nextcloud-aio-stalwart",
+      "display_name": "Stalwart",
+      "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/stalwart",
+      "image": "marcoambrosini/aio-stalwart",
+      "image_tag": "v1",
+      "internal_port": "587",
+      "restart": "unless-stopped",
+      "ports": [
+          {
+            "ip_binding": "",
+            "port_number": "25",
+            "protocol": "tcp"
+          },
+          {
+            "ip_binding": "",
+            "port_number": "143",
+            "protocol": "tcp"
+          },
+          {
+            "ip_binding": "",
+            "port_number": "465",
+            "protocol": "tcp"
+          },
+          {
+            "ip_binding": "",
+            "port_number": "587",
+            "protocol": "tcp"
+          },
+          {
+            "ip_binding": "",
+            "port_number": "993",
+            "protocol": "tcp"
+          },
+          {
+            "ip_binding": "",
+            "port_number": "4190",
+            "protocol": "tcp"
+          }
+      ],
+      "environment": [
+          "TZ=%TIMEZONE%",
+          "NC_DOMAIN=%NC_DOMAIN%"
+      ],
+      "volumes": [
+          {
+              "source": "nextcloud_aio_stalwart",
+              "destination": "/opt/stalwart-mail",
+              "writeable": true
+          },
+          {
+              "source": "nextcloud_aio_caddy",
+              "destination": "/caddy",
+              "writeable": false
+          }
+      ],
+      "backup_volumes": [
+          "nextcloud_aio_stalwart"
+      ]
+  },
+  {
+    "container_name": "nextcloud-aio-local-ai",
+    "display_name": "Local AI",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/local-ai",
+    "image": "szaimen/aio-local-ai",
+    "image_tag": "v1",
+    "internal_port": "8080",
+    "restart": "unless-stopped",
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "MODELS_PATH=/models"
+    ],
+    "volumes": [
+        {
+            "source": "nextcloud_aio_localai_models",
+            "destination": "/models",
+            "writeable": true
+        },
+        {
+            "source": "nextcloud_aio_localai_images",
+            "destination": "/tmp/generated/images/",
+            "writeable": true
+        },
+        {
+            "source": "%NEXTCLOUD_DATADIR%",
+            "destination": "/nextcloud",
+            "writeable": false
+        }
+    ],
+    "nextcloud_exec_commands": [
+        "mkdir '/mnt/ncdata/admin/files/nextcloud-aio-local-ai'",
+        "touch '/mnt/ncdata/admin/files/nextcloud-aio-local-ai/models.yaml'",
+        "echo 'Scanning nextcloud-aio-local-ai folder for admin user...'",
+        "php /var/www/html/occ files:scan --path='/admin/files/nextcloud-aio-local-ai'",
+        "php /var/www/html/occ app:install integration_openai",
+        "php /var/www/html/occ app:enable integration_openai",
+        "php /var/www/html/occ config:app:set integration_openai url --value http://nextcloud-aio-local-ai:8080",
+        "php /var/www/html/occ app:install assistant",
+        "php /var/www/html/occ app:enable assistant"
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-fail2ban",
+    "display_name": "Fail2ban",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/fail2ban",
+    "image": "szaimen/aio-fail2ban",
+    "image_tag": "v1",
+    "internal_port": "host",
+    "restart": "unless-stopped",
+    "cap_add": [
+        "NET_ADMIN",
+        "NET_RAW"
+    ],
+    "environment": [
+        "TZ=%TIMEZONE%"
+    ],
+    "volumes": [
+        {
+             "source": "nextcloud_aio_nextcloud",
+            "destination": "/nextcloud",
+            "writeable": false
+        },
+        {
+            "source": "nextcloud_aio_vaultwarden_logs",
+            "destination": "/vaultwarden",
+            "writeable": false
+        }
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-vaultwarden",
+    "display_name": "Vaultwarden",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/vaultwarden",
+    "image": "vaultwarden/server",
+    "image_tag": "alpine",
+    "internal_port": "8812",
+    "restart": "unless-stopped",
+    "ports": [
+        {
+          "ip_binding": "%APACHE_IP_BINDING%",
+          "port_number": "8812",
+          "protocol": "tcp"
+        }
+    ],
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "ROCKET_PORT=8812",
+        "ADMIN_TOKEN=%VAULTWARDEN_ADMIN_TOKEN%",
+        "DOMAIN=https://bw.%NC_DOMAIN%",
+        "LOG_FILE=/logs/vaultwarden.log",
+        "LOG_LEVEL=warn",
+        "SIGNUPS_VERIFY=true",
+        "SIGNUPS_ALLOWED=false"
+    ],
+    "volumes": [
+        {
+            "source": "nextcloud_aio_vaultwarden",
+            "destination": "/data",
+            "writeable": true
+        },
+        {
+            "source": "nextcloud_aio_vaultwarden_logs",
+            "destination": "/logs",
+            "writeable": true
+        }
+    ],
+    "backup_volumes": [
+        "nextcloud_aio_vaultwarden"
+    ],
+    "secrets": [
+        "VAULTWARDEN_ADMIN_TOKEN"
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-pihole",
+    "display_name": "Pi-hole",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/pi-hole",
+    "image": "pihole/pihole",
+    "image_tag": "latest",
+    "internal_port": "8573",
+    "restart": "unless-stopped",
+    "init": false,
+    "ports": [
+        {
+          "ip_binding": "",
+          "port_number": "53",
+          "protocol": "tcp"
+        },
+        {
+            "ip_binding": "",
+            "port_number": "53",
+            "protocol": "udp"
+        },
+        {
+            "ip_binding": "",
+            "port_number": "8573",
+            "protocol": "tcp"
+        }
+    ],
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "WEBPASSWORD=%PIHOLE_WEBPASSWORD%",
+        "DNSMASQ_LISTENING=all",
+        "WEB_PORT=8573"
+    ],
+    "volumes": [
+        {
+            "source": "nextcloud_aio_pihole",
+            "destination": "/etc/pihole",
+            "writeable": true
+        },
+        {
+            "source": "nextcloud_aio_pihole_dnsmasq",
+            "destination": "/etc/dnsmasq.d",
+            "writeable": true
+        }
+    ],
+    "backup_volumes": [
+        "nextcloud_aio_pihole",
+        "nextcloud_aio_pihole_dnsmasq"
+    ],
+    "secrets": [
+        "PIHOLE_WEBPASSWORD"
+    ]
+  },
+  {
+    "aio_services_v1": [
+        {
+            "container_name": "nextcloud-aio-lldap",
+            "display_name": "Light LDAP implementation",
+            "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/lldap",
+            "image": "lldap/lldap",
+            "image_tag": "v0",
+            "internal_port": "17170",
+            "restart": "unless-stopped",
+            "ports": [
+                {
+                  "ip_binding": "%APACHE_IP_BINDING%",
+                  "port_number": "17170",
+                  "protocol": "tcp"
+                }
+            ],
+            "apparmor_unconfined": true,
+            "environment": [
+                "TZ=%TIMEZONE%",
+                "UID=65534",
+                "GID=65534",
+                "LLDAP_JWT_SECRET=%LLDAP_JWT_SECRET%",
+                "LLDAP_LDAP_USER_PASS=%LLDAP_LDAP_USER_PASS%",
+                "LLDAP_LDAP_BASE_DN=%NC_DOMAIN_BASE_DN%"
+            ],
+            "secrets": [
+                "LLDAP_JWT_SECRET",
+                "LLDAP_LDAP_USER_PASS"
+            ],
+            "volumes": [
+                {
+                    "source": "nextcloud_aio_lldap",
+                    "destination": "/data",
+                    "writeable": true
+                }
+            ],
+            "backup_volumes": [
+                "nextcloud_aio_lldap"
+            ]
+        }
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-memories",
+    "display_name": "Memories Transcoder",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/memories",
+    "image": "radialapps/go-vod",
+    "image_tag": "latest",
+    "internal_port": "47788",
+    "restart": "unless-stopped",
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "NEXTCLOUD_HOST=https://%NC_DOMAIN%"
+    ],
+    "volumes": [
+        {
+            "source": "%NEXTCLOUD_DATADIR%",
+            "destination": "/mnt/ncdata",
+            "writeable": false
+        }
+    ],
+    "devices": [
+        "/dev/dri"
+    ],
+    "nextcloud_exec_commands": [
+        "php /var/www/html/occ app:install memories",
+        "php /var/www/html/occ app:enable memories",
+        "php /var/www/html/occ config:system:set memories.vod.external --value true --type bool",
+        "php /var/www/html/occ config:system:set memories.vod.connect --value nextcloud-aio-memories:47788"
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-facerecognition",
+    "display_name": "Computing container for facerecognition",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/facerecognition",
+    "image": "matiasdelellis/facerecognition-external-model",
+    "image_tag": "v1",
+    "internal_port": "5000",
+    "restart": "unless-stopped",
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "API_KEY=some-super-secret-api-key"
+    ],
+    "aio_variables": [
+        "nextcloud_memory_limit=4096M"
+    ],
+    "nextcloud_exec_commands": [
+        "php /var/www/html/occ app:install facerecognition",
+        "php /var/www/html/occ app:enable facerecognition", 
+        "php /var/www/html/occ config:system:set facerecognition.external_model_url --value nextcloud-aio-facerecognition:5000",
+        "php /var/www/html/occ config:system:set facerecognition.external_model_api_key --value some-super-secret-api-key",
+        "php /var/www/html/occ face:setup -m 5",
+        "php /var/www/html/occ face:setup -M 4G",
+        "php /var/www/html/occ config:app:set facerecognition analysis_image_area --value 4320000",
+        "php /var/www/html/occ config:system:set enabledFaceRecognitionMimetype 0 --value image/jpeg",
+        "php /var/www/html/occ config:system:set enabledFaceRecognitionMimetype 1 --value image/png",
+        "php /var/www/html/occ config:system:set enabledFaceRecognitionMimetype 2 --value image/heic",
+        "php /var/www/html/occ config:system:set enabledFaceRecognitionMimetype 3 --value image/tiff",
+        "php /var/www/html/occ config:system:set enabledFaceRecognitionMimetype 4 --value image/webp",
+        "php /var/www/html/occ face:background_job --defer-clustering &"
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-npmplus",
+    "display_name": "NPMplus",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/npmplus",
+    "image": "zoeyvid/npmplus",
+    "image_tag": "latest",
+    "internal_port": "host",
+    "restart": "unless-stopped",
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "NC_AIO=true",
+        "NC_DOMAIN=%NC_DOMAIN%"
+    ],
+    "volumes": [
+        {
+            "source": "nextcloud_aio_npmplus",
+            "destination": "/data",
+            "writeable": true
+        }
+    ],
+    "backup_volumes": [
+        "nextcloud_aio_npmplus"
+    ],
+    "aio_variables": [
+        "apache_ip_binding=127.0.0.1",
+        "apache_port=11000"
+    ]
+  },
+  {
+    "container_name": "nextcloud-aio-caddy",
+    "display_name": "Caddy with geoblocking",
+    "documentation": "https://github.com/nextcloud/all-in-one/tree/main/community-containers/caddy",
+    "image": "szaimen/aio-caddy",
+    "image_tag": "v1",
+    "internal_port": "443",
+    "restart": "unless-stopped",
+    "ports": [
+        {
+          "ip_binding": "",
+          "port_number": "443",
+          "protocol": "tcp"
+        },
+        {
+            "ip_binding": "",
+            "port_number": "443",
+            "protocol": "udp"
+        }
+    ],
+    "environment": [
+        "TZ=%TIMEZONE%",
+        "NC_DOMAIN=%NC_DOMAIN%",
+        "APACHE_PORT=%APACHE_PORT%"
+    ],
+    "volumes": [
+        {
+            "source": "nextcloud_aio_caddy",
+            "destination": "/data",
+            "writeable": true
+        },
+        {
+            "source": "%NEXTCLOUD_DATADIR%",
+            "destination": "/nextcloud",
+            "writeable": false
+        }
+    ],
+    "aio_variables": [
+        "apache_ip_binding=127.0.0.1",
+        "apache_port=11000"
+    ],
+    "nextcloud_exec_commands": [
+        "mkdir '/mnt/ncdata/admin/files/nextcloud-aio-caddy'",
+        "touch '/mnt/ncdata/admin/files/nextcloud-aio-caddy/allowed-countries.txt'",
+        "echo 'Scanning nextcloud-aio-caddy folder for admin user...'",
+        "php /var/www/html/occ files:scan --path='/admin/files/nextcloud-aio-caddy'"
+    ]
+  }
+ 
   ]
+ 
 }
