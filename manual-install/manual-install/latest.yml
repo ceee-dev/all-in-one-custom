@@ -462,20 +462,6 @@ services:
     aio_variables:
       - nextcloud_memory_limit=4096M
 
-  nextcloud-aio-npmplus:
-    documentation: https://github.com/nextcloud/all-in-one/tree/main/community-containers/npmplus
-    image: zoeyvid/npmplus:latest
-    restart: unless-stopped
-    environment:
-      - TZ=${TIMEZONE}
-      - NC_AIO=true
-      - NC_DOMAIN=${NC_DOMAIN}
-    volumes:
-      - nextcloud_aio_npmplus:/data:rw
-    aio_variables:
-      - apache_ip_binding=127.0.0.1
-      - apache_port=11000
-
   nextcloud-aio-dlna:
     documentation: https://github.com/nextcloud/all-in-one/tree/main/community-containers/dlna
     image: thanek/nextcloud-dlna:latest
@@ -533,8 +519,6 @@ volumes:
     name: nextcloud_aio_localai_models
   nextcloud_aio_nextcloud:
     name: nextcloud_aio_nextcloud
-  nextcloud_aio_npmplus:
-    name: nextcloud_aio_npmplus
   nextcloud_aio_onlyoffice:
     name: nextcloud_aio_onlyoffice
   nextcloud_aio_pihole:
@@ -559,7 +543,7 @@ networks:
   nextcloud-aio:
     name: nextcloud-aio
     driver: bridge
-    enable_ipv6: true
+    enable_ipv6: false
     ipam:
       driver: default
       config:
