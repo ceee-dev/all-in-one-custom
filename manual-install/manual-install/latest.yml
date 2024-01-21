@@ -498,7 +498,56 @@ services:
       - ${NEXTCLOUD_DATADIR}:/data:ro
       - ${NEXTCLOUD_MOUNT}:${NEXTCLOUD_MOUNT}:ro
 
+  nextcloud-aio-webtop: 
+    image: lscr.io/linuxserver/ubuntu-openbox
+    container_name: webtop
+    security_opt:
+      - seccomp:unconfined #optional
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=
+      - SUBFOLDER=/ #optional
+      - TITLE=Webtop #optional
+    volumes:
+      - /path/to/data:/config
+      - /var/run/docker.sock:/var/run/docker.sock #optional
+    ports:
+      - 3000:3000
+      - 3001:3001
+    devices:
+      - /dev/dri:/dev/dri #optional
+    shm_size: "1gb" #optional
+    restart: unless-stopped
+
+   nextcloud-aio-duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - CLI_ARGS= #optional
+    volumes:
+      - nextcloud-aio-duplicati/config:/config
+      -  nextcloud_aio_apache:/backups
+      - /path/to/source:/source
+    ports:
+      - 8200:8200
+    restart: unless-stopped
+
+  nextcloud-aio-portainer:
+      image: portainer/portainer-ce
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./data/conf/portainer:/data
+      restart: always
+
 volumes:
+  nextcloud-aio-portainer:
+    name: nextcloud-aio-portainer
+  nextcloud-aio-duplicati:
+    name: nextcloud-aio-duplicati
   nextcloud_aio_apache:
     name: nextcloud_aio_apache
   nextcloud_aio_caddy:

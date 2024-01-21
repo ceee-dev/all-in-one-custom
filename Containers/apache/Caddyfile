@@ -10,7 +10,7 @@
     }
 
     log {
-        level ERROR
+        level ERROR nextcloud_aio_apache
     }
 }
 
@@ -19,7 +19,7 @@
     # Collabora
     route /browser/* {
         reverse_proxy {$COLLABORA_HOST}:9980
-    }
+    } nextcloud_aio_apache
     route /hosting/* {
         reverse_proxy {$COLLABORA_HOST}:9980
     }
@@ -32,7 +32,7 @@
         uri strip_prefix /push
         reverse_proxy {$NOTIFY_PUSH_HOST}:7867
     }
-
+ nextcloud_aio_apache
     # Onlyoffice
     route /onlyoffice/* {
         uri strip_prefix /onlyoffice
